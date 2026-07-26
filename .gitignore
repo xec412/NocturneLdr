@@ -1,0 +1,30 @@
+# Build outputs
+Debug/
+Release/
+x64/
+*.obj
+*.exe
+*.pdb
+*.ilk
+*.log
+*.tlog/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.ncb
+*.sdf
+*.opensdf
+*.VC.db
+*.VC.opendb
+ipch/
+
+# Binaries
+*.dll
+*.lib
+*.exp
+
+# Shellcode / payload artifacts
+*.bin
+*.raw

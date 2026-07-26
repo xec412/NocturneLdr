@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="Nocturne.vcxproj" Id="5713291f-3c16-42a4-b5ed-ba1d37cc6bfc" />
+</Solution>
