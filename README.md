@@ -82,6 +82,33 @@ The dynamic function table entry is invisible to WinDbg's forensic commands. Typ
 <em>WinDbg bypass — .fnent shows donor unwind info, no dynamic table artifacts</em>
 </div>
 
+### 😴 Zilean Sleep Obfuscation with Stack Duplication
+
+While the payload sleeps, the loader's entire image is encrypted in memory using a **ROP chain** built from `RtlRegisterWait` and `NtContinue`. The chain is executed on a dedicated worker thread and follows this sequence:
+
+1. **WaitForSingleObjectEx** — Gate: waits for the trigger event
+2. **VirtualProtect** — Changes the image to `PAGE_READWRITE`
+3. **SystemFunction040** — Encrypts the image in-place (RtlEncryptMemory)
+4. **NtGetContextThread** — Backs up the current thread's context
+5. **NtSetContextThread** — Replaces it with a **spoofed context captured from a legitimate thread** (stack duplication)
+6. **WaitForSingleObjectEx** — Sleeps for the configured timeout
+7. **NtSetContextThread** — Restores the original context from backup
+8. **SystemFunction041** — Decrypts the image back (RtlDecryptMemory)
+9. **VirtualProtect** — Restores `PAGE_EXECUTE_READ`
+10. **SetEvent** — Signals completion
+
+During sleep, if an EDR calls `GetThreadContext`, it sees the duplicated stack of a legitimate Windows thread — not the loader's real context. Combined with BYOUD stack spoofing during execution, the thread appears clean both while running and while sleeping.
+
+### 🔐 Heap Masking
+
+Before the image is encrypted, all **busy heap allocations** across every process heap (except the default process heap) are XOR-encrypted with a per-cycle random key. This prevents EDR memory scanners from finding decrypted strings, shellcode fragments, or configuration data in heap memory while the loader sleeps. The same key is used to decrypt after wakeup — the operation is fully symmetric.
+
+### 🛡️ EAF Bypass (ShieldedRead)
+
+Export Address Filtering (EAF) uses hardware breakpoints to detect when untrusted code reads the export tables of critical modules like `ntdll.dll` and `kernel32.dll`. Nocturne bypasses this using a **gadget-based read primitive**: instead of directly dereferencing export table pointers, all reads are routed through a `MOV RAX, [RAX]; RET` gadget found inside `ntdll.dll` itself. Since the actual memory read occurs within a signed Microsoft module, EAF's hardware breakpoints see a legitimate caller and do not trigger.
+
+The `ShieldedRead` assembly stub accepts a target address and an optional gadget pointer. If a gadget is provided, it jumps to the gadget to perform the read; otherwise it falls back to a normal dereference. The `LdrShieldedSymbolResolveByHash` resolver uses this for every export table access — PE header parsing, name array iteration, ordinal lookup, and function address resolution all go through the gadget.
+
 ### 🔒 CRT-Free Build
 
 The entire project compiles with `/NODEFAULTLIB` and a custom entry point. Memory management uses `HeapAlloc`/`HeapFree` through operator overrides. `memset` and `memcpy` are implemented as custom intrinsics. This eliminates CRT dependencies that would inflate the binary and add unnecessary attack surface.
@@ -133,11 +160,13 @@ Nocturne/
 │   ├── Resolver.cpp          # PEB walking & hash-based API resolution
 │   ├── StackUtils.cpp        # Stack origin & cookie detection
 │   ├── Proxy.cpp             # Thread pool proxied API calls
+│   ├── Zilean.cpp            # Sleep obfuscation, heap masking & stack duplication
 │   ├── Intrinsic.cpp         # Custom memset/memcpy
 │   ├── Debug.cpp             # Debug console allocation
 │   ├── ShadowGate.asm        # Payload execution stub
 │   ├── StackSearch.asm       # Stack scanning primitives
 │   ├── SetRegister.asm       # Register manipulation
+│   ├── Unguard.asm           # EAF bypass gadget-based read primitive
 │   └── ApiStub.asm           # Indirect syscall stubs
 └── docs/
     └── screenshots/

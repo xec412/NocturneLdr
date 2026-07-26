@@ -105,7 +105,7 @@ NTSTATUS Proxy::WorkItemNtProtectVirtualMemory(
     HANDLE                               EventHandle                = nullptr;
     NTSTATUS                             Status                     = STATUS_SUCCESS;
     PROTECT_MEMORY_CTX                   Ctx                        = {
-                                                                 .NtProtectVirtualMemory = Resolver::LdrGetSymbolByHash(Resolver::LdrGetModuleByHash(Hash::ExprHashStrDjb2(L"ntdll.dll")),
+                                                                 .NtProtectVirtualMemory = Resolver::LdrShieldedSymbolResolveByHash(Resolver::LdrGetModuleByHash(Hash::ExprHashStrDjb2(L"ntdll.dll")),
                                                                      Hash::ExprHashStrDjb2("NtProtectVirtualMemory")),
 
                                                                  .Args = {

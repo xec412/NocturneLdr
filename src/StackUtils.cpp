@@ -17,7 +17,7 @@ ULONG_PTR StackUtils::ResolveThreadStackOrigin(
     OUT PULONG_PTR puStackPointer
 ) {
     /* Find BTIT address */
-    PVOID Btit = Resolver::LdrGetSymbolByHash(Resolver::LdrGetModuleByHash(Hash::ExprHashStrDjb2(L"kernel32.dll")), Hash::ExprHashStrDjb2("BaseThreadInitThunk"));
+    PVOID Btit = Resolver::LdrShieldedSymbolResolveByHash(Resolver::LdrGetModuleByHash(Hash::ExprHashStrDjb2(L"kernel32.dll")), Hash::ExprHashStrDjb2("BaseThreadInitThunk"));
     if (Btit == nullptr) {
 #ifdef DEBUG
         DBGPRINT("[-] BTIT Return Address Not Found - %s.%d \n", GET_FILENAME(__FILE__), __LINE__);

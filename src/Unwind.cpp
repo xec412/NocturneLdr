@@ -301,7 +301,7 @@ BOOL Unwinder::ResolveDynamicFunctionTablePtrs(
     SIZE_T                              NtdllSize           = Nt->OptionalHeader.SizeOfImage;
 
     /* Find RtlAddFunctionTable's address */
-    ULONG_PTR FnAddress = (ULONG_PTR)Resolver::LdrGetSymbolByHash(Ntdll, Hash::ExprHashStrDjb2("RtlAddFunctionTable"));
+    ULONG_PTR FnAddress = (ULONG_PTR)Resolver::LdrShieldedSymbolResolveByHash(Ntdll, Hash::ExprHashStrDjb2("RtlAddFunctionTable"));
     if (!FnAddress)
         return FALSE;
 
@@ -459,14 +459,14 @@ BOOL Unwinder::LocateInvertedFunctionTable(
        Some Windows builds export this table directly
        fastest path - if found, no pattern scan needed
     */
-    ULONG_PTR TableAddress = (ULONG_PTR)Resolver::LdrGetSymbolByHash(Ntdll, Hash::ExprHashStrDjb2("KiUserInvertedFunctionTable"));
+    ULONG_PTR TableAddress = (ULONG_PTR)Resolver::LdrShieldedSymbolResolveByHash(Ntdll, Hash::ExprHashStrDjb2("KiUserInvertedFunctionTable"));
 
     /* Step 2: Read RtlLookupFunctionEntry's machine code 
        This function is called during stack walks
        internally it calls RtlpxLookupFunctionTable
        we find that CALL to learn the inner function's address
     */
-    ULONG_PTR FnAddress = (ULONG_PTR)Resolver::LdrGetSymbolByHash(Ntdll, Hash::ExprHashStrDjb2("RtlLookupFunctionEntry"));
+    ULONG_PTR FnAddress = (ULONG_PTR)Resolver::LdrShieldedSymbolResolveByHash(Ntdll, Hash::ExprHashStrDjb2("RtlLookupFunctionEntry"));
     if (!FnAddress)
         return FALSE;
 
@@ -538,7 +538,7 @@ BOOL Unwinder::LocateInvertedFunctionTable(
        CALL RtlAcquireSRWLockShared <- Acquire lock
     */
     ULONG_PTR LockAddress = 0;
-    ULONG_PTR AcquireShared = (ULONG_PTR)Resolver::LdrGetSymbolByHash(Ntdll, Hash::ExprHashStrDjb2("RtlAcquireSRWLockShared"));
+    ULONG_PTR AcquireShared = (ULONG_PTR)Resolver::LdrShieldedSymbolResolveByHash(Ntdll, Hash::ExprHashStrDjb2("RtlAcquireSRWLockShared"));
 
     for (int i = 5; i < 1019; i++) {
 
@@ -631,7 +631,7 @@ BOOL Unwinder::ResolveLdrMrdataProtector(
     OUT fnLdrProtectMrdata* pOutFnPtr
 ) {
     PVOID                   Ntdll           = Resolver::LdrGetModuleByHash(Hash::ExprHashStrDjb2(L"ntdll.dll"));
-    ULONG_PTR               FnAddress       = (ULONG_PTR)Resolver::LdrGetSymbolByHash(Ntdll, Hash::ExprHashStrDjb2("RtlAddFunctionTable"));
+    ULONG_PTR               FnAddress       = (ULONG_PTR)Resolver::LdrShieldedSymbolResolveByHash(Ntdll, Hash::ExprHashStrDjb2("RtlAddFunctionTable"));
 
     BYTE Buffer[512] = { 0 };
     Primitive::MemoryCopy(Buffer, (PVOID)FnAddress, sizeof(Buffer));
@@ -680,8 +680,8 @@ BOOL Unwinder::CollapseInvertedTableEntry(
     PRTL_SRWLOCK                                SrwLock                     = nullptr;
     PVOID                                       Ntdll                       = Resolver::LdrGetModuleByHash(Hash::ExprHashStrDjb2(L"ntdll.dll"));
 
-    auto Acquire = (fnRtlAcquireSRWLockExclusive)Resolver::LdrGetSymbolByHash(Ntdll, Hash::ExprHashStrDjb2("RtlAcquireSRWLockExclusive"));
-    auto Release = (fnRtlReleaseSRWLockExclusive)Resolver::LdrGetSymbolByHash(Ntdll, Hash::ExprHashStrDjb2("RtlReleaseSRWLockExclusive"));
+    auto Acquire = (fnRtlAcquireSRWLockExclusive)Resolver::LdrShieldedSymbolResolveByHash(Ntdll, Hash::ExprHashStrDjb2("RtlAcquireSRWLockExclusive"));
+    auto Release = (fnRtlReleaseSRWLockExclusive)Resolver::LdrShieldedSymbolResolveByHash(Ntdll, Hash::ExprHashStrDjb2("RtlReleaseSRWLockExclusive"));
 
     fnLdrProtectMrdata LdrProtectMrData = nullptr;
     Unwinder::ResolveLdrMrdataProtector(&LdrProtectMrData);
@@ -850,8 +850,8 @@ BOOL Unwinder::ExpandInvertedTableEntry(
     PRTL_SRWLOCK                                SrwLock = nullptr;
     PVOID                                       Ntdll = Resolver::LdrGetModuleByHash(Hash::ExprHashStrDjb2(L"ntdll.dll"));
 
-    auto Acquire = (fnRtlAcquireSRWLockExclusive)Resolver::LdrGetSymbolByHash(Ntdll, Hash::ExprHashStrDjb2("RtlAcquireSRWLockExclusive"));
-    auto Release = (fnRtlReleaseSRWLockExclusive)Resolver::LdrGetSymbolByHash(Ntdll, Hash::ExprHashStrDjb2("RtlReleaseSRWLockExclusive"));
+    auto Acquire = (fnRtlAcquireSRWLockExclusive)Resolver::LdrShieldedSymbolResolveByHash(Ntdll, Hash::ExprHashStrDjb2("RtlAcquireSRWLockExclusive"));
+    auto Release = (fnRtlReleaseSRWLockExclusive)Resolver::LdrShieldedSymbolResolveByHash(Ntdll, Hash::ExprHashStrDjb2("RtlReleaseSRWLockExclusive"));
 
     fnLdrProtectMrdata LdrProtectMrData = nullptr;
     Unwinder::ResolveLdrMrdataProtector(&LdrProtectMrData);

