@@ -169,6 +169,7 @@
     <ClCompile Include="src\StackSpoofing.cpp" />
     <ClCompile Include="src\StackUtils.cpp" />
     <ClCompile Include="src\Unwind.cpp" />
+    <ClCompile Include="src\Zilean.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\Common.h" />
@@ -185,6 +186,7 @@
     </MASM>
     <MASM Include="src\ShadowGate.asm" />
     <MASM Include="src\StackSearch.asm" />
+    <MASM Include="src\Unguard.asm" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
