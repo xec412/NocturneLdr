@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0a0e1a"/>
+      <stop offset="60%" stop-color="#111827"/>
+      <stop offset="100%" stop-color="#1a1f35"/>
+    </linearGradient>
+    <filter id="softGlow">
+      <feGaussianBlur stdDeviation="1.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Sky -->
+  <rect width="1200" height="300" fill="url(#sky)"/>
+
+  <!-- Stars -->
+  <circle cx="120" cy="45" r="1" fill="#e2e8f0" opacity="0.7"/>
+  <circle cx="280" cy="80" r="0.8" fill="#e2e8f0" opacity="0.5"/>
+  <circle cx="95" cy="120" r="0.6" fill="#e2e8f0" opacity="0.4"/>
+  <circle cx="450" cy="35" r="1.2" fill="#e2e8f0" opacity="0.6"/>
+  <circle cx="520" cy="100" r="0.7" fill="#e2e8f0" opacity="0.35"/>
+  <circle cx="680" cy="55" r="0.9" fill="#e2e8f0" opacity="0.55"/>
+  <circle cx="750" cy="130" r="0.6" fill="#e2e8f0" opacity="0.3"/>
+  <circle cx="350" cy="160" r="0.8" fill="#e2e8f0" opacity="0.25"/>
+  <circle cx="900" cy="70" r="1" fill="#e2e8f0" opacity="0.5"/>
+  <circle cx="1050" cy="45" r="0.7" fill="#e2e8f0" opacity="0.6"/>
+  <circle cx="1100" cy="110" r="0.9" fill="#e2e8f0" opacity="0.4"/>
+  <circle cx="180" cy="200" r="0.5" fill="#e2e8f0" opacity="0.2"/>
+  <circle cx="830" cy="160" r="0.6" fill="#e2e8f0" opacity="0.3"/>
+  <circle cx="620" cy="180" r="0.5" fill="#e2e8f0" opacity="0.2"/>
+  <circle cx="1000" cy="150" r="0.7" fill="#e2e8f0" opacity="0.25"/>
+
+  <!-- Title -->
+  <text x="600" y="135" text-anchor="middle" font-family="'JetBrains Mono', 'Consolas', monospace" font-size="64" font-weight="300" letter-spacing="18" fill="#c8d6e5" filter="url(#softGlow)">NOCTURNE</text>
+
+  <!-- Subtitle -->
+  <text x="600" y="175" text-anchor="middle" font-family="'JetBrains Mono', 'Consolas', monospace" font-size="14" font-weight="400" letter-spacing="6" fill="#7a8ba8">CET-COMPATIBLE STACK SPOOFING LOADER</text>
+
+  <!-- Thin accent line -->
+  <line x1="440" y1="195" x2="760" y2="195" stroke="#4a5568" stroke-width="0.5" opacity="0.5"/>
+
+  <!-- Bottom fade -->
+  <rect y="260" width="1200" height="40" fill="url(#sky)" opacity="0.6"/>
+</svg>

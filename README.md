@@ -1,10 +1,8 @@
 <div align="center">
 
-# 🌙 Nocturne
+<img src="docs/banner.svg" alt="Nocturne Banner" width="100%"/>
 
-### CET-Compatible Stack Spoofing Loader
-
-A Windows x64 loader that achieves **legitimate call stacks** through runtime function table manipulation, code cave injection, and inverted function table collapse — fully compatible with Intel CET Shadow Stacks.
+<br/>
 
 [![Windows](https://img.shields.io/badge/Platform-Windows%20x64-blue?style=flat-square&logo=windows)](https://microsoft.com)
 [![C++20](https://img.shields.io/badge/Language-C++20-purple?style=flat-square&logo=cplusplus)](https://isocpp.org)
@@ -41,7 +39,7 @@ All Win32/NT APIs are resolved at runtime by walking the PEB loader data structu
 The Import Address Table is populated exclusively with **benign USER32.dll imports** (`MessageBoxA`, `RegisterClassW`, `IsWindowVisible`, etc.) placed inside an unreachable code branch. Static analysis tools see a harmless GUI application rather than a loader.
 
 <div align="center">
-<img src="docs/screenshots/IatCamouflage.png" alt="IAT Camouflage — Only benign imports visible" width="700"/>
+<img src="docs/screenshots/IatCamouflage.png" alt="IAT Camouflage — Only benign imports visible" width="900"/>
 <br/>
 <em>Clean IAT — only benign USER32.dll imports and heap management functions</em>
 </div>
@@ -61,7 +59,7 @@ This is Nocturne's core technique. The stack spoofing pipeline:
 The result: every frame in the call stack resolves to `windows_storage!<function>` — a legitimate, backed module.
 
 <div align="center">
-<img src="docs/screenshots/ProcessHacker.png" alt="Process Hacker — Clean call stack with windows.storage frames" width="700"/>
+<img src="docs/screenshots/ProcessHacker.png" alt="Process Hacker — Clean call stack with windows.storage frames" width="900"/>
 <br/>
 <em>Process Hacker call stack — all frames resolve to windows.storage.dll</em>
 </div>
@@ -69,7 +67,7 @@ The result: every frame in the call stack resolves to `windows_storage!<function
 <br/>
 
 <div align="center">
-<img src="docs/screenshots/WinDbg.png" alt="WinDbg — Spoofed stack trace" width="700"/>
+<img src="docs/screenshots/WinDbg.png" alt="WinDbg — Spoofed stack trace" width="900"/>
 <br/>
 <em>WinDbg stack trace showing legitimate windows_storage frames</em>
 </div>
@@ -79,7 +77,7 @@ The result: every frame in the call stack resolves to `windows_storage!<function
 The dynamic function table entry is invisible to WinDbg's forensic commands. Type patching and `.pdata` suppression ensure that debugger analysis cannot distinguish the spoofed frames from real ones.
 
 <div align="center">
-<img src="docs/screenshots/BypassWinDbg.png" alt="WinDbg Bypass — Dynamic table hidden from debugger" width="700"/>
+<img src="docs/screenshots/BypassWinDbg.png" alt="WinDbg Bypass — Dynamic table hidden from debugger" width="900"/>
 <br/>
 <em>WinDbg bypass — .fnent shows donor unwind info, no dynamic table artifacts</em>
 </div>
@@ -93,7 +91,7 @@ The entire project compiles with `/NODEFAULTLIB` and a custom entry point. Memor
 Shellcode is XOR-decrypted at runtime and executed through the **ShadowGate** assembly stub, which sets up the spoofed stack frame before transferring control.
 
 <div align="center">
-<img src="docs/screenshots/ReverseShell.png" alt="Reverse Shell — Payload executing with spoofed stack" width="700"/>
+<img src="docs/screenshots/ReverseShell.png" alt="Reverse Shell — Payload executing with spoofed stack" width="900"/>
 <br/>
 <em>Reverse shell established with fully spoofed call stack</em>
 </div>
