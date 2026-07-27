@@ -167,7 +167,7 @@ Nocturne/
 │   ├── StackSearch.asm       # Stack scanning primitives
 │   ├── SetRegister.asm       # Register manipulation
 │   ├── Unguard.asm           # EAF bypass gadget-based read primitive
-│   └── ApiStub.asm           # Indirect syscall stubs
+│   └── ApiStub.asm           # Thread pool proxy call stubs
 └── docs/
     └── screenshots/
 ```
