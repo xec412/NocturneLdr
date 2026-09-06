@@ -188,7 +188,7 @@ PRUNTIME_FUNCTION Unwinder::FindDonorByFrameSize(
             return &RtTable[i];
         }
 
-        else if (!bStrict && Actual >= (dwFrameSize + 0x28) && Actual <= (dwFrameSize + 0x500)) {
+        else if (!bStrict && Actual >= (dwFrameSize + 0x28) && Actual <= (dwFrameSize + 0x2000)) {
 
             DWORD Difference = Actual - dwFrameSize;
             if ((Difference % 16) == 8) {
